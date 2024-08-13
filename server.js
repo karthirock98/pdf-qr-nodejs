@@ -5,15 +5,15 @@ import https from 'https';
 import multer from 'multer';
 import path from 'path';
 import { PDF_QR_JS } from 'pdf-qr';
+import fs from 'fs';
+import * as cheerio from 'cheerio';
 dotenv.config();
+
+const __dirname = import.meta.dirname;
 
 const app = express();
 
-let data1 = JSON.stringify({
-  "id": "wMYBq9fe6W11NVRmjT1MXQ=="
-});
 const agent = new https.Agent({ rejectUnauthorized: false });
-
 
 const config_settings = {
   "scale": {
@@ -32,7 +32,7 @@ const config_settings = {
   "jsQR": {
     "inversionAttempts": "dontInvert"
   }
-}
+};
 
 const data_config = {
   method: 'post',
@@ -40,60 +40,86 @@ const data_config = {
   url: 'https://dc.crsorgi.gov.in/crs/0.0.1//certificate/validate',
   headers: {
     'Content-Type': 'application/json',
-    'Authorization': 'Bearer eyJ4NXQiOiJNRGc1WlRNeU5XTmpaREppWVRZMll6YzBPR1ZrWW1WaU5UTXhNR0UwWmpCak1qVmxPR05sWmciLCJraWQiOiJNemxpWmpGa1lURTFOelUzTmpneFkyRmhNVEpsT1dNMk9XSmhNRFJqTVRrM09EZGpOREJtT0dSak1XRXhaV1ZoTURaalpqZGlORFJtT0RnNFlXVTNNQV9SUzI1NiIsImFsZyI6IlJTMjU2In0.eyJzdWIiOiJhZG1pbiIsImF1dCI6IkFQUExJQ0FUSU9OIiwiYXVkIjoidExoWnB5ZnpMM20yeTJwTEpQeVBJN1hwNGVzYSIsIm5iZiI6MTcyMzM5MTI4MiwiYXpwIjoidExoWnB5ZnpMM20yeTJwTEpQeVBJN1hwNGVzYSIsInNjb3BlIjoiZGVmYXVsdCIsImlzcyI6Imh0dHBzOlwvXC9hcGkuY3Jzb3JnaS5nb3YuaW46NDQzXC9vYXV0aDJcL3Rva2VuIiwiZXhwIjoxNzU5MzkxMjgyLCJpYXQiOjE3MjMzOTEyODIsImp0aSI6IjRlYmE1M2JmLTc4YTktNDhlMS05NDFiLWFlZDM1MDVmNGE0MSJ9.JSB3rf_5eDZ9m4dH2FpADNnwzzlAmHEf7t80AbrWQgWnhbTm_bqDKmiO_1E69IfARsew46yVViyACY_dyGEyf2UWouhlVSqPok18cSvQw5_rJEt1StBB4HvpMl86brXQRBUmv5YGC8Y3X16TYuv7-a4dy3aVEQCOQplth_GhHP8MJgHI-aXJw0w1RrnTvV4O1DjV7fpI1ZE5bSlCOTFdsb5hyIkpxSdW__IvncjconGBoejeTte1cN8uSMMlZz868DpyPPNGW7-qqxgI8kxADtMVZ1t21ZZdligOJP2fFCKIk9-5B6kcIll-pXO0tFS0ld3TjuMKb3PRG0dmtT_GQA',
-    'Cookie': 'TS01ba0a42=01e3182d3542d36e644b92efaaabefa13788ad6a39336e91de9e96373b6590e391231a99e2364d5d8ae60f293ab1cc3bf7fba8635f'
+    'Authorization': process.env.BEARER_TOKEN,
+    'Cookie': 'TS01ba0a42=01e3182d358641ddcc607108751d5a48cb96cc2e94446e314c69e1eaf09775c9ec460a477d9f2b7c3bdef4a7130f3fbb2deb86706a'
   },
-  data: data1,
-  httpsAgent: agent
+  data: JSON.stringify({ "id": "wMYBq9fe6W11NVRmjT1MXQ==" }),
+  httpsAgent: agent,
+  insecureHTTPParser: true
 };
 
-const upload = multer({ storage: multer.memoryStorage() })
-// Function to extract images from PDF and look for QR code
-const extractQRCodeFromPDF = async (pdfBuffer) => {
-  /**
-   * Load sample file when are testing
-   */
-  // var input_file = fs.readFileSync('./public/assets/file-samples/sample_qr_code_1.pdf');
-  var returnResponse = async function (result) {
-    
+const upload = multer({ storage: multer.memoryStorage() });
 
-    if (result.success) {
-      console.log(result.codes);
-      if( result.codes.length > 0 ){
-        const qrUrl = result.codes[0];
-        const resu = await getFinalUrlAndId(qrUrl);
-        if(resu){
-          // data_config.data = JSON.stringify({"id": resu})
-          axios.request(data_config)
-            .then((response) => {
-              console.log(JSON.stringify(response.data));
-            })
-            .catch((error) => {
-              console.log(error);
-            });
+const extractQRCodeFromPDF = (pdfBuffer) => {
+  return new Promise((resolve, reject) => {
+    PDF_QR_JS.decodeDocument(pdfBuffer, config_settings, async (result) => {
+      if (result.success) {
+        console.log(result.codes);
+        if (result.codes.length > 0) {
+          const qrUrl = result.codes[0];
+          try {
+            const resu = await getFinalUrlAndId(qrUrl);
+            if (resu) {
+              try {
+                const response = await axios.request({
+                  ...data_config,
+                  data: JSON.stringify({ "id": resu.replace(/\s+/g, '+') })
+                });
+                console.log('Response Data:', JSON.stringify(response.data));
+                resolve(response.data);
+              } catch (error) {
+                console.error('Error in Axios Request:', error.message);
+                reject(error);
+              }
+            } else {
+              resolve(null);
+            }
+          } catch (error) {
+            reject(error);
+          }
+        } else {
+          resolve(null);
         }
+      } else {
+        console.log(result.message);
+        resolve(null);
       }
-
-    } else{
-      console.log(result.message);
-    }
-      
-  }
-  /**
-   * PDF Buffer Data
-   * Config settings like (zoom, invert Doc, improvisation)
-   * Callback after process done
-   */
-  PDF_QR_JS.decodeDocument(pdfBuffer, config_settings, returnResponse);
+    });
+  });
 };
 
-// Route to handle PDF upload and QR code extraction
 app.post('/upload-pdf', upload.single('file'), async (req, res) => {
+  const resultFilePath = path.join(__dirname, 'public', 'result.html')
   try {
     const qrCodeContent = await extractQRCodeFromPDF(req.file.buffer);
-
     if (qrCodeContent) {
-      res.send(`QR Code Content: ${qrCodeContent}`);
+      // res.send(qrCodeContent.data);
+      const resultContent = await fs.promises.readFile(resultFilePath, 'utf8');
+      const $ = cheerio.load(resultContent)
+      // Function to handle updating or removing elements based on the existence of data from site
+      const isEmpty = (value) => {
+        return value == null || (typeof value === 'string' && !value.trim());
+      };
+      
+      const updateOrRemoveRow = (dataKey, selector, rowClass) => {
+        if (!isEmpty(qrCodeContent.data[dataKey])) {
+          $(`td[name="${selector}"]`).text(qrCodeContent.data[dataKey]);
+        } else {
+          // If empty remove in from html
+          $(`.${rowClass}`).remove();
+        }
+      };
+      
+      // Applying the function to each field on html data
+      updateOrRemoveRow('DOD', 'dod', 'dod-row');
+      updateOrRemoveRow('NAME', 'person-name', 'name-row');
+      updateOrRemoveRow('RegistrationDate', 'reg-date', 'reg-date-row');
+      updateOrRemoveRow('RegistrationNumber', 'reg-num', 'reg-no-row');
+      updateOrRemoveRow('NameOfFather', 'father-name', 'f-name-row');
+      updateOrRemoveRow('NameOfMother', 'mother-name', 'm-name-row');
+      
+      
+      res.send($.html());
     } else {
       res.send('No QR code found in the PDF.');
     }
@@ -102,63 +128,39 @@ app.post('/upload-pdf', upload.single('file'), async (req, res) => {
   }
 });
 
-
-
-
-
 async function getFinalUrlAndId(initialUrl) {
   try {
-      // Perform the request with `maxRedirects` set to 0 to catch the redirect response
-      const response = await axios.get(initialUrl, { maxRedirects: 0 });
-
-      // Extract the final URL from the `Location` header
-      const finalUrl = response.headers.location;
+    // Perform the request with `maxRedirects` set to 0 to catch the redirect response
+    const response = await axios.get(initialUrl, { maxRedirects: 0 });
+    const finalUrl = response.headers.location;
+    console.log('Redirected URL:', finalUrl);
+    const url = new URL(finalUrl);
+    const id = url.searchParams.get('id');
+    console.log('ID:', id);
+    return id;
+  } catch (error) {
+    if (error.response && error.response.status === 302) {
+      const finalUrl = error.response.headers.location;
       console.log('Redirected URL:', finalUrl);
-
-      // Extract query parameters from the final URL
       const url = new URL(finalUrl);
       const id = url.searchParams.get('id');
       console.log('ID:', id);
-  } catch (error) {
-      if (error.response && error.response.status === 302) {
-          // Handle the redirect
-          const finalUrl = error.response.headers.location;
-          console.log('Redirected URL:', finalUrl);
-
-          // Extract query parameters from the final URL
-          const url = new URL(finalUrl);
-          const id = url.searchParams.get('id');
-          console.log('ID:', id);
-          return id;
-      } else {
-        
-          console.error('Error:', error.message);
-          return false;
-      }
+      return id;
+    } else {
+      console.error('Error:', error.message);
+      return false;
+    }
   }
 }
 
-
-
-
-
-
-
-
-
-
-
-
-app.use(express.urlencoded({ extended: true }))
-app.use(express.static('public'))
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static('public'));
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-
-const PORT = process.env.port || 3000
+const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-  console.log(`Server Started and Running on PORT ${PORT}`)
-})
-
+  console.log(`Server Started and Running on PORT ${PORT}`);
+});
