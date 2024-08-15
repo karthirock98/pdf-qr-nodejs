@@ -49,14 +49,14 @@ const data_config = {
 };
 
 const upload = multer({ storage: multer.memoryStorage() });
-
+let qrUrl = null;
 const extractQRCodeFromPDF = (pdfBuffer) => {
   return new Promise((resolve, reject) => {
     PDF_QR_JS.decodeDocument(pdfBuffer, config_settings, async (result) => {
       if (result.success) {
         console.log(result.codes);
         if (result.codes.length > 0) {
-          const qrUrl = result.codes[0];
+          qrUrl = result.codes[0];
           try {
             const resu = await getFinalUrlAndId(qrUrl);
             if (resu) {
@@ -117,7 +117,9 @@ app.post('/upload-pdf', upload.single('file'), async (req, res) => {
       updateOrRemoveRow('RegistrationNumber', 'reg-num', 'reg-no-row');
       updateOrRemoveRow('NameOfFather', 'father-name', 'f-name-row');
       updateOrRemoveRow('NameOfMother', 'mother-name', 'm-name-row');
-      
+
+      $('.qr-url-container a').text(qrUrl)
+      $('.qr-url-container a').attr('href', qrUrl)
       
       res.send($.html());
     } else {

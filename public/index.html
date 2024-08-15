@@ -1,24 +1,52 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simple Form</title>
-    <link rel="stylesheet" id="bootstrap" href="./assets/bootstrap/css/bootstrap.min.css">
-    <link rel="stylesheet" href="./assets/css/main.css">
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CSR Form - Home</title>
+    <link
+      rel="stylesheet"
+      id="bootstrap"
+      href="./assets/bootstrap/css/bootstrap.min.css"
+    />
+    <link rel="stylesheet" href="./assets/css/main.css" />
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+  </head>
+  <body>
     <div class="container mt-5">
-        <div class="mb-3">
-            <form action="/upload-pdf" method="POST" enctype="multipart/form-data" class="mt-4">
-                <label for="formFile" class="form-label">Default file input example</label>
-                <input class="form-control form-control-file" type="file" id="file" name="file">
-                <button type="submit" class="btn btn-primary">Upload</button>
-            </form>
-            
-          </div>
+
+      <div class="card text-center">
+        <div class="card-header">CSR PDF File Validate</div>
+        <div class="card-body" style="position: relative; z-index: 1">
+          <h5 class="card-title">Select a PDF file to scan</h5>
+          <p class="card-text">Currently we are supporting .pdf file only.</p>
+          <form
+            action="/upload-pdf"
+            method="POST"
+            enctype="multipart/form-data"
+            class="mt-4 mx-auto"
+            id="upload-pdf-form"
+            style="max-width: 287px"
+          >
+            <input
+              class="form-control form-control-file mb-2"
+              type="file"
+              id="file"
+              accept="application/pdf"
+              name="file"
+            />
+            <button type="submit" class="btn btn-primary" style="width: 100px">
+              Scan
+            </button>
+          </form>
+        </div>
+        <div class="card-footer text-body-secondary">
+          <small class="text-body-tertiary">Created by Veemak</small>
+        </div>
+      </div>
     </div>
 
     <script src="./assets/bootstrap/js/bootstrap.min.js"></script>
-</body>
+    <script src="./assets/js/main.js" id="main"></script>
+  </body>
 </html>
