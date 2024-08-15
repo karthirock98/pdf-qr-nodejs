@@ -1,10 +1,11 @@
 $(document).ready(function () {
     const allowedMimeTypes = ['']
     $('#upload-pdf-form').on('submit', (e) => {
-        e.preventDefault();
+        
         const fileInput = document.getElementById('file')
         if( fileInput.files.length === 0 ){
             alert('Please select a file')
+            e.preventDefault();
             return false;
         }
     })
