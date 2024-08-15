@@ -1,15 +1,17 @@
 import axios from 'axios';
+import * as cheerio from 'cheerio';
 import dotenv from 'dotenv';
 import express from 'express';
+import fs from 'fs';
 import https from 'https';
 import multer from 'multer';
-import path from 'path';
+import path, { dirname } from 'path';
 import { PDF_QR_JS } from 'pdf-qr';
-import fs from 'fs';
-import * as cheerio from 'cheerio';
+import { fileURLToPath } from 'url';
 dotenv.config();
 
-const __dirname = import.meta.dirname;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const app = express();
 
@@ -89,6 +91,7 @@ const extractQRCodeFromPDF = (pdfBuffer) => {
 };
 
 app.post('/upload-pdf', upload.single('file'), async (req, res) => {
+  var gdfgf = '';
   const resultFilePath = path.join(__dirname, 'public', 'result.html')
   try {
     const qrCodeContent = await extractQRCodeFromPDF(req.file.buffer);
